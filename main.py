@@ -6,11 +6,18 @@
 # https://www.youtube.com/watch?v=J0y2tjBz2Ao
 
 # Crear directorio virtual dentro de la carpeta del proyecto
-# python -m venv fastapi-env
+# python -m venv fastapi-env (windows)
+# python3 -m venv fastapi-env (ubuntu)
 
 # activar entorno virtual
-# fastapi-env\Scripts\activate
+# fastapi-env\Scripts\activate (windows)
+# source fastapi-env/bin/activate (ubuntu)
 
+# Si tenemos un archivo requeriment.txt podemos instalar las dependencias necesarias con:
+# pip install -r requeriments.txt
+
+###############################################################
+# si no tenemos requeriments.txt ejecutamos lo siguiente:
 # instalar fastapi y uvicorn
 # pip install fastapi uvicorn
 
@@ -25,9 +32,17 @@
 # https://pytorch.org/get-started/locally/
 # pip install torch
 
+################################################################
+
+# Si queremos asegurarnos de tener el uvicorn podemos ejecutar:
+# pip install fastapi uvicorn
+
 # Crear archivo main.py
 # Ejecutar archivo main.py
-# uvicorn main:app --reload
+# uvicorn main:app --reload (si esta solo en local)
+
+# Tambien podemos ejecutar:
+# uvicorn main:app --host 0.0.0.0 --port 800 (recomendable)
 
 # desactivar archivo, escribimos en el cmd
 # deactivate
