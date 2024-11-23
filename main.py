@@ -115,7 +115,7 @@ def analizar_sentimientos(titulos: List[str]) -> List[dict]:
 # Opcion 1: La URL está incluida directamente en la ruta, lo cual puede requerir codificación de caracteres especiales.
 # Ejemplo: http://127.0.0.1:8000/scraping/bbc
 # Ruta para obtener los titulares de un sitio web
-@app.get("/scraping/{url}")
+@app.get("/scrapping/{url}")
 def obtener_titulares(url: str):
     try:
 
@@ -142,7 +142,7 @@ def obtener_titulares(url: str):
 # Opcion 2: Usa un parámetro de consulta ?url=, lo que simplifica el paso de URL completas y evita problemas con caracteres especiales en las rutas.
 # Ejemplo: http://127.0.0.1:8000/scraping/?url=https://www.bbc.com
 # Ruta para obtener los titulares de un sitio web
-@app.get("/scraping/")
+@app.get("/scrapping/")
 def obtener_titulares(url: str):
     try:
         # Si la URL no contiene "http" al principio, se completa con https://
