@@ -33,6 +33,14 @@
 # pip install torch
 
 ################################################################
+# Opcional
+# Instalar geoip2 para limitar el acceso a una zona demografica
+# pip install geoip2
+
+# Instalar su base de datos
+# https://dev.maxmind.com/geoip/geolocate-an-ip/databases/
+
+################################################################
 
 # Si queremos asegurarnos de tener el uvicorn podemos ejecutar:
 # pip install fastapi uvicorn
@@ -42,7 +50,8 @@
 # uvicorn main:app --reload (si esta solo en local)
 
 # Tambien podemos ejecutar:
-# uvicorn main:app --host 0.0.0.0 --port 800 (recomendable)
+# uvicorn main:app --host 0.0.0.0 --port 8000 (recomendable)
+# uvicorn main:app --host 0.0.0.0 --port 8000 --reload (otra opcion)
 
 # desactivar archivo, escribimos en el cmd
 # deactivate
@@ -50,6 +59,9 @@
 # Si no funciona el deactivate ponemos lo siguiente en el cmd
 # tasklist | findstr uvicorn
 # taskkill /PID <PID>
+
+# Crear archivo requeriment
+# pip freeze > requirements.txt
 
 #Ruta donde se ejecuta
 # http://127.0.0.1:8000
@@ -62,7 +74,7 @@ from typing import Optional # Datos opcionales
 app = FastAPI()
 
 
-
+# Librerias para hacer el scrapping
 from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
@@ -118,7 +130,6 @@ def analizar_sentimientos(titulos: List[str]) -> List[dict]:
 @app.get("/scrapping/{url}")
 def obtener_titulares(url: str):
     try:
-
         # Si la URL no contiene "http" al principio, se completa con https://
         if not url.startswith("http"):
             url = f"https://www.{url}.com"
