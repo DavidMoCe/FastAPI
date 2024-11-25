@@ -1,4 +1,4 @@
-#################################
+################################################################################################################################
 # IMPORTANTE
 # tendremos que utilizar la version de python 3.12 para poder utilizar transformers
 
@@ -16,7 +16,7 @@
 # Si tenemos un archivo requeriment.txt podemos instalar las dependencias necesarias con:
 # pip install -r requeriments.txt
 
-###############################################################
+################################################################################################################################
 # si no tenemos requeriments.txt ejecutamos lo siguiente:
 # instalar fastapi y uvicorn
 # pip install fastapi uvicorn
@@ -32,7 +32,7 @@
 # https://pytorch.org/get-started/locally/
 # pip install torch
 
-################################################################
+################################################################################################################################
 # Opcional
 # Instalar geoip2 para limitar el acceso a una zona demografica
 # pip install geoip2
@@ -40,7 +40,63 @@
 # Instalar su base de datos
 # https://dev.maxmind.com/geoip/geolocate-an-ip/databases/
 
-################################################################
+# from fastapi import FastAPI, HTTPException, Request
+# import geoip2.database
+
+# app = FastAPI()
+
+# # Load the pre-trained GeoIP database for location-based access
+# # The GeoLite2-City.mmdb file must be downloaded from MaxMind's website
+# geoip_reader = geoip2.database.Reader('GeoLite2-City.mmdb')  # Ensure this file is in your project directory
+
+# # Function to check if the user is allowed based on their IP location
+# def is_user_allowed(ip: str) -> bool:
+#     try:
+#         # Query the IP address using the GeoIP2 database
+#         response = geoip_reader.city(ip)
+
+#         # Check if the country is Spain (ISO code "ES")
+#         if response.country.iso_code != "ES":
+#             return False
+        
+#         # Check if the region is Andalusia
+#         if response.subdivisions.most_specific.name != "Andalucía":
+#             return False
+        
+#         # Check if the city is Málaga
+#         if response.city.name != "Málaga":
+#             return False
+        
+#         return True  # If all conditions are met, allow access
+#     except Exception as e:
+#         # Handle any exception (e.g., invalid IP address or GeoIP query failure)
+#         return False
+
+# # Endpoint to access the content and check the user's location
+# @app.get("/scrapping_CNN")
+# def obtener_titulares_CNN(request: Request):
+#     user_ip = request.client.host  # Get the IP address of the user
+
+#     # Check if the user is allowed based on their geographical location
+#     if not is_user_allowed(user_ip):
+#         raise HTTPException(status_code=403, detail="Access Denied: You must be from Málaga, Andalucía, Spain.")
+
+#     # Continue with the scraping and sentiment analysis (from your existing code)
+#     try:
+#         # Call the scraping function
+#         news_items = content_web_CNN()
+
+#         # Perform sentiment analysis on the extracted titles
+#         sentiment_results = analyze_sentiments_CNN(news_items)
+
+#         # Return the sentiment results and the titles
+#         return {"result": sentiment_results, "amount": len(sentiment_results)}
+
+#     except Exception as e:
+#         return {"error": str(e)}
+
+
+################################################################################################################################
 
 # Si queremos asegurarnos de tener el uvicorn podemos ejecutar:
 # pip install fastapi uvicorn
@@ -66,7 +122,7 @@
 #Ruta donde se ejecuta
 # http://127.0.0.1:8000
 
-################################################
+################################################################################################################################
 
 
 
