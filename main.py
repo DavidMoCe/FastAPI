@@ -67,115 +67,224 @@
 # http://127.0.0.1:8000
 
 ################################################
+
+
+
+# Libraries for web scraping
+# Library to create the API and manage routes
 from fastapi import FastAPI
-from pydantic import BaseModel # Validacion de datos
-from typing import Optional # Datos opcionales
 
-app = FastAPI()
-
-
-# Librerias para hacer el scrapping
-from fastapi import FastAPI
+# Library to make HTTP requests to websites
 import requests
+
+# Library for parsing and extracting data from HTML
 from bs4 import BeautifulSoup
+
+# Library for type hints, useful for defining lists and their contents
 from typing import List
+
+# Library to perform natural language processing (NLP) tasks, like sentiment analysis
 from transformers import pipeline
 
+# Library to handle relative and absolute URLs
+from urllib.parse import urljoin
+
+# Initialize the FastAPI application to define and manage API routes
 app = FastAPI()
 
 
-# Cargar el pipeline preentrenado de Hugging Face para análisis de sentimientos
-# El modelo distilbert-base-uncased-finetuned-sst-2-english está diseñado para análisis de sentimientos en inglés
+# Load the pre-trained Hugging Face pipeline for sentiment analysis
+# The model distilbert-base-uncased-finetuned-sst-2-english is designed for sentiment analysis in English
 sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
 
 
-# Función para hacer el scraping de la web
-def contenido_web(url: str) -> List[str]:
-    # Paso 1: Descargar el contenido HTML de la página
+# Function to perform web scraping
+def content_from_web(url: str) -> List[str]:
+    # Step 1: Download the HTML content of the page
     response = requests.get(url)
 
-    # Verificar que la solicitud fue exitosa (código 200)
+    # Verify that the request was successful (status code 200)
     if response.status_code != 200:
-        raise Exception(f"Error al acceder al sitio web: {response.status_code}")
+        raise Exception(f"Error accessing the website: {response.status_code}")
 
-    # Paso 2: Analizar el contenido HTML con BeautifulSoup
+    # Step 2: Parse the HTML content with BeautifulSoup
     soup = BeautifulSoup(response.content, "html.parser")
 
-    # Paso 3: Extraer los datos de interés (en este caso, titulares de <h2>)
+    # Step 3: Extract the relevant data (in this case, headlines from <h2>)
     titles = [title.get_text().strip() for title in soup.find_all("h2")]
 
     return titles
 
+# Function to analyze the sentiments of the titles using the BERT model
+def analyze_sentiments(titulos: List[str]) -> List[dict]:
+    results = []
 
-# Función para analizar los sentimientos de los títulos utilizando el modelo BERT
-def analizar_sentimientos(titulos: List[str]) -> List[dict]:
-    resultados = []
-
-    # Analizar cada título con el pipeline de Hugging Face
+    # Analyze each title with the Hugging Face pipeline
     for title in titulos:
         sentiment = sentiment_pipeline(title)
 
-        # Guardar el resultado
-        resultados.append({
-            "titulo": title,
-            "sentimiento": sentiment[0]['label'],
-            "confianza": sentiment[0]['score']
+        # Store the result
+        results.append({
+            "title": title,
+            "sentiment": sentiment[0]['label'],
+            "precision": sentiment[0]['score']
         })
 
-    return resultados
+    return results
 
-# Opcion 1: La URL está incluida directamente en la ruta, lo cual puede requerir codificación de caracteres especiales.
-# Ejemplo: http://127.0.0.1:8000/scraping/bbc
-# Ruta para obtener los titulares de un sitio web
-@app.get("/scrapping/{url}")
-def obtener_titulares(url: str):
+
+################################################################################################################################
+# Function to scrape the CNN website
+def content_web_CNN():
+    # Step 1: Download the HTML content of the page
+    url = "https://www.cnn.com"
+
+     # List to store the results
+    results = []
+
+    # Verify that the request was successful (status code 200)
+    response = requests.get(url)
+    
+    if response.status_code != 200:
+        raise Exception(f"Error accessing the website: {response.status_code}")
+
+    # Step 2: Parse the HTML content with BeautifulSoup
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    # Step 3: Extract the <a> tags containing the class 'container__link' (to get both title and link)
+    news_items = soup.find_all("a", class_="container__link")
+
+    # Extract title and link
+    for news in news_items:
+        # Extract the link (the value of the 'href' attribute in the <a> tag)
+        relative_link = news.get("href")
+
+        # If the link is relative (starts with '/'), combine it with the base URL
+        if relative_link and relative_link.startswith('/'):
+            full_link = urljoin(url, relative_link)  # Concatenate the base URL with the relative path
+        else:
+            full_link = relative_link  # If it's already a full URL, leave it as is
+
+        # Find the <span> with the class 'container__headline-text' inside each <a>
+        span = news.find("span", class_="container__headline-text")
+
+        # If the <span> and the link are found, extract the title and add it to the results
+        if span and full_link:
+            title = span.get_text(strip=True)
+            results.append({"title": title, "link": full_link})
+
+    return results
+
+# Function to analyze the sentiments of the news_items
+def analyze_sentiments_CNN(news_items):
+    # Analyzes the sentiments of the titles and associates them with their links
+    results = []
+
+    for news in news_items:
+        title = news["title"]
+        link = news["link"]
+
+        # Analyze the sentiment of the title
+        sentiment = sentiment_pipeline(title)
+
+        # Add the result
+        results.append({
+            "title": title,
+            "link": link,
+            "sentiment": sentiment[0]['label'],
+            "precision": sentiment[0]['score']
+        })
+
+    return results
+
+# Endpoint to get the news items and their sentiments
+@app.get("/scrapping_CNN")
+def get_CNN_headlines():
     try:
-        # Si la URL no contiene "http" al principio, se completa con https://
-        if not url.startswith("http"):
-            url = f"https://www.{url}.com"
+        # Call the scraping function
+        news_items = content_web_CNN()
 
-        # Llamamos a la función de scraping
-        titulos = contenido_web(url)
+        # Perform sentiment analysis on the extracted titles
+        sentiment_results = analyze_sentiments_CNN(news_items)
 
-        # Eliminamos el último título (como en tu código original)
-        titulos = titulos[:-1]
-
-        # Realizamos el análisis de sentimientos sobre los títulos extraídos
-        resultados_sentimiento = analizar_sentimientos(titulos)
-
-        # Devolvemos los resultados de los sentimientos y los títulos
-        return {"resultados": resultados_sentimiento, "cantidad": len(resultados_sentimiento)}
+        # Return the sentiment results and the titles
+        return {"result": sentiment_results, "amount": len(sentiment_results)}
 
     except Exception as e:
         return {"error": str(e)}
 
 
-# Opcion 2: Usa un parámetro de consulta ?url=, lo que simplifica el paso de URL completas y evita problemas con caracteres especiales en las rutas.
-# Ejemplo: http://127.0.0.1:8000/scraping/?url=https://www.bbc.com
-# Ruta para obtener los titulares de un sitio web
+
+################################################################################################################################
+# Test endpoints
+
+# Option 1: The URL is included directly in the route, which may require encoding special characters.
+# Example: http://127.0.0.1:8000/scraping/bbc
+# Route to get headlines from a website
+@app.get("/scrapping/{url}")
+def get_headlines(url: str):
+    try:
+        # If the URL does not start with "http", it will be completed with https://
+        if not url.startswith("http"):
+            url = f"https://www.{url}.com"
+
+        # Call the scraping function
+        titles = content_from_web(url)
+
+        # Remove the last title
+        titles = titles[:-1]
+
+        # Perform sentiment analysis on the extracted titles
+        sentiment_results = analyze_sentiments(titles)
+
+        # Return the sentiment results and the titles
+        return {"result": sentiment_results, "amount": len(sentiment_results)}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# Option 2: Use a query parameter ?url=, which simplifies passing complete URLs and avoids issues with special characters in the paths.
+# Example: http://127.0.0.1:8000/scraping/?url=https://www.bbc.com
+# Route to get the headlines from a website
 @app.get("/scrapping/")
 def obtener_titulares(url: str):
     try:
-        # Si la URL no contiene "http" al principio, se completa con https://
+         # If the URL does not start with "http", it will be completed with https://
         if not url.startswith("http"):
             url = f"https://www.{url}.com"
 
-        # Llamamos a la función de scraping
-        titulos = contenido_web(url)
+        # Call the scraping function
+        titles = content_from_web(url)
 
-        # Eliminamos el último título (como en tu código original)
-        titulos = titulos[:-1]
+        # Remove the last title
+        titles = titles[:-1]
 
-        # Realizamos el análisis de sentimientos sobre los títulos extraídos
-        resultados_sentimiento = analizar_sentimientos(titulos)
+        # Perform sentiment analysis on the extracted titles
+        sentiment_results = analyze_sentiments(titles)
 
-        # Devolvemos los resultados de los sentimientos y los títulos
-        return {"resultados": resultados_sentimiento, "cantidad": len(resultados_sentimiento)}
+        # Return the sentiment results and the titles
+        return {"result": sentiment_results, "amount": len(sentiment_results)}
 
     except Exception as e:
         return {"error": str(e)}
 
 
+
+# Endpoint for getting the credits from an API
+@app.get("/")
+def index():
+    return {"Credits" : "Created by 'David Moreno Cerezo' and 'Jairo Andrades Bueno'"}
+
+
+
+###############################################################
+# Ejemplos de prueba
+# from fastapi import FastAPI
+from pydantic import BaseModel # Validacion de datos
+from typing import Optional # Datos opcionales
+
+#app = FastAPI()
 
 # Validar los datos
 class Libro(BaseModel):
@@ -185,9 +294,9 @@ class Libro(BaseModel):
     editorial: Optional[str]
 
 
-@app.get("/")
-def index():
-    return {"message" : "Hello, World!"}
+# @app.get("/")
+# def index():
+#     return {"message" : "Created by [Person 1] and [Person 2]"}
 
 
 @app.get("/libros/{id}")
