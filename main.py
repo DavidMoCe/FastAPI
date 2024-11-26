@@ -386,6 +386,12 @@ def scrape_nytimes_headlines():
     except Exception as e:
         return {"error": str(e)}
 
+
+# Endpoint for getting the credits from an API
+@app.get("/")
+def index():
+    return {"Credits" : "Created by 'David Moreno Cerezo' and 'Jairo Andrades Bueno'"}
+
 ################################################################################################################################
 # Test endpoints
 
@@ -440,16 +446,8 @@ def obtener_titulares(url: str):
     except Exception as e:
         return {"error": str(e)}
 
-
-
-# Endpoint for getting the credits from an API
-@app.get("/")
-def index():
-    return {"Credits" : "Created by 'David Moreno Cerezo' and 'Jairo Andrades Bueno'"}
-
-
-
 ###############################################################
+
 # Ejemplos de prueba
 # from fastapi import FastAPI
 from pydantic import BaseModel # Validacion de datos
