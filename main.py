@@ -124,8 +124,6 @@
 
 ################################################################################################################################
 
-
-
 # Libraries for web scraping
 # Library to create the API and manage routes
 from fastapi import FastAPI
@@ -192,14 +190,8 @@ def analyze_sentiments(titulos: List[str]) -> List[dict]:
 
 
 ################################################################################################################################
-# Function to scrape the CNN website
-def content_web_CNN():
-    # Step 1: Download the HTML content of the page
-    url = "https://www.cnn.com"
-
-     # List to store the results
-    results = []
-
+# Function to perform web scraping
+def generic_web_content(url, tag, class_=None, class2=None, subtitle_tag=None):
     # Verify that the request was successful (status code 200)
     response = requests.get(url)
     
@@ -209,71 +201,190 @@ def content_web_CNN():
     # Step 2: Parse the HTML content with BeautifulSoup
     soup = BeautifulSoup(response.content, "html.parser")
 
-    # Step 3: Extract the <a> tags containing the class 'container__link' (to get both title and link)
-    news_items = soup.find_all("a", class_="container__link")
+    # Step 3: Extract the main elements (tags with optional class)
+    if class_:
+        elements = soup.find_all(tag, class_=class_)
+    else:
+        elements = soup.find_all(tag)
 
+    # List to store the results
+    results = []
+    
     # Extract title and link
-    for news in news_items:
-        # Extract the link (the value of the 'href' attribute in the <a> tag)
-        relative_link = news.get("href")
+    for element in elements:
+        # Extract the link (the 'href' attribute value of the tag)
+        relative_link = element.get("href")
+        if relative_link:
+            # Convert to full URL if necessary
+            full_link = urljoin(url, relative_link) if relative_link.startswith('/') else relative_link
 
-        # If the link is relative (starts with '/'), combine it with the base URL
-        if relative_link and relative_link.startswith('/'):
-            full_link = urljoin(url, relative_link)  # Concatenate the base URL with the relative path
-        else:
-            full_link = relative_link  # If it's already a full URL, leave it as is
+            # Extract the text from the secondary tag if specified
+            if subtitle_tag:
+                if class2:
+                    # If class2 is a list or tuple, check if any match
+                    if isinstance(class2, (list, tuple)):
+                        for cls in class2:
+                            subtitle = element.find(subtitle_tag, class_=cls)
+                            # Break the loop if a subtitle is found
+                            if subtitle:
+                                break
+                    # If class2 is a single class
+                    else:  
+                        subtitle = element.find(subtitle_tag, class_=class2)
+                else:
+                    subtitle = element.find(subtitle_tag)
+                if subtitle:
+                    text = subtitle.get_text(strip=True)
+                else:
+                    text = None
+            else:
+                text = element.get_text(strip=True)
 
-        # Find the <span> with the class 'container__headline-text' inside each <a>
-        span = news.find("span", class_="container__headline-text")
-
-        # If the <span> and the link are found, extract the title and add it to the results
-        if span and full_link:
-            title = span.get_text(strip=True)
-            results.append({"title": title, "link": full_link})
+            # Add to results if both are present
+            if text and full_link:
+                results.append({"title": text, "link": full_link})
 
     return results
 
+# Function to removes duplicates from a list.
+def remove_duplicates(lst):
+    unique_list = []
+    for item in lst:
+        if item not in unique_list:
+            unique_list.append(item)
+    return unique_list
+
 # Function to analyze the sentiments of the news_items
-def analyze_sentiments_CNN(news_items):
+def analyze_sentiments(news_items):
     # Analyzes the sentiments of the titles and associates them with their links
     results = []
 
-    for news in news_items:
-        title = news["title"]
-        link = news["link"]
+    for i, r in enumerate(news_items):
+        try:
+            # Analyze the sentiment of the title
+            sentiment = sentiment_pipeline(r['title'])
 
-        # Analyze the sentiment of the title
-        sentiment = sentiment_pipeline(title)
-
-        # Add the result
-        results.append({
-            "title": title,
-            "link": link,
-            "sentiment": sentiment[0]['label'],
-            "precision": sentiment[0]['score']
-        })
+            # Add the result
+            results.append({
+                "title": r['title'],
+                "link": r['link'],
+                "sentiment": sentiment[0]['label'],
+                "precision": sentiment[0]['score'] * 100
+            })
+        except Exception as e:
+            # Handle cases where sentiment analysis or data is invalid
+            print(f"Error analyzing sentiment for: {r.get('title', 'Unknown')} - {e}")
+            results.append({
+                "title": r.get('title', 'Unknown'),
+                "link": r.get('link', 'Unknown'),
+                "sentiment": "UNKNOWN",
+                "confidence": 0.0
+            })
 
     # Sort the results by precision in descending order
-    results = sorted(results, key=lambda x: x['precision'], reverse=True)
+    if results:
+        results = sorted(results, key=lambda x: x['precision'], reverse=True)
+    
     return results
 
+################################################################################################################################
+
 # Endpoint to get the news items and their sentiments
-@app.get("/scrapping_CNN")
-def get_CNN_headlines():
+# Scrapes headlines from BBC and performs sentiment analysis.
+@app.get("/scrapping_bbc")
+def scrape_bbc_headlines():
     try:
-        # Call the scraping function
-        news_items = content_web_CNN()
+        # URL and parameters for BBC scraping
+        url = "https://bbc.com"
+        tag = "a"
+        class = "sc-2e6baa30-0 gILusN"
+        class2 = ["sc-8ea7699c-3 dhclWg", "sc-8ea7699c-3 hlhXXQ"]
+        subtitle_tag = "h2"
 
-        # Perform sentiment analysis on the extracted titles
-        sentiment_results = analyze_sentiments_CNN(news_items)
+        # Scraping content from BBC
+        news_items = generic_web_content(url, tag, class, class2, subtitle_tag)
 
-        # Return the sentiment results and the titles
-        return {"result": sentiment_results, "amount": len(sentiment_results)}
+        # Remove duplicates
+        unique_news_items = remove_duplicates(news_items)
+
+        # Perform sentiment analysis
+        sentiment_results = analyze_sentiments(unique_news_items)
+
+        # Return the results
+        return {
+            "result": sentiment_results,
+            "amount": len(sentiment_results)
+        }
 
     except Exception as e:
         return {"error": str(e)}
 
 
+# CNN Endpoint
+@app.get("/scrapping_cnn")
+def scrape_cnn_headlines():
+    """
+    Scrapes headlines from CNN and performs sentiment analysis.
+    """
+    try:
+        # URL and parameters for CNN scraping
+        url = "https://cnn.com"
+        tag = "a"
+        class_ = "container__link"
+        class2 = "container__headline-text"
+        subtitle_tag = "span"
+
+        # Scraping content from CNN
+        news_items = contenido_web_generico(url, tag, class_, class2, subtitle_tag)
+
+        # Remove duplicates
+        unique_news_items = remove_duplicates(news_items)
+
+        # Perform sentiment analysis
+        sentiment_results = analyze_sentiments(unique_news_items)
+
+        # Return the results
+        return {
+            "result": sentiment_results,
+            "amount": len(sentiment_results)
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+# NYTimes Endpoint
+@app.get("/scrapping_nytimes")
+def scrape_nytimes_headlines():
+    """
+    Scrapes headlines from the New York Times and performs sentiment analysis.
+    """
+    try:
+        # URL and parameters for NYTimes scraping
+        url_nytimes = "https://www.nytimes.com/international/section/world?page=10"
+        
+        # Scraping content from NYTimes
+        news_items_1 = contenido_web_generico(url_nytimes, etiqueta="a", clase="css-1u3p7j1")
+        news_items_2 = contenido_web_generico(
+            url_nytimes, etiqueta="a", clase="css-8hzhxf", clase2="css-1j88qqx e15t083i0", subtitulo_etiqueta="h3"
+        )
+        
+        # Combine results
+        news_items = news_items_1 + news_items_2
+
+        # Remove duplicates
+        unique_news_items = remove_duplicates(news_items)
+
+        # Perform sentiment analysis
+        sentiment_results = analyze_sentiments(unique_news_items)
+
+        # Return the results
+        return {
+            "result": sentiment_results,
+            "amount": len(sentiment_results)
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
 
 ################################################################################################################################
 # Test endpoints
