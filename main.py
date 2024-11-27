@@ -152,46 +152,9 @@ app = FastAPI()
 sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
 
 
-# Function to perform web scraping
-def content_from_web(url: str) -> List[str]:
-    # Step 1: Download the HTML content of the page
-    response = requests.get(url)
-
-    # Verify that the request was successful (status code 200)
-    if response.status_code != 200:
-        raise Exception(f"Error accessing the website: {response.status_code}")
-
-    # Step 2: Parse the HTML content with BeautifulSoup
-    soup = BeautifulSoup(response.content, "html.parser")
-
-    # Step 3: Extract the relevant data (in this case, headlines from <h2>)
-    titles = [title.get_text().strip() for title in soup.find_all("h2")]
-
-    return titles
-
-# Function to analyze the sentiments of the titles using the BERT model
-def analyze_sentiments(titulos: List[str]) -> List[dict]:
-    results = []
-
-    # Analyze each title with the Hugging Face pipeline
-    for title in titulos:
-        sentiment = sentiment_pipeline(title)
-
-        # Store the result
-        results.append({
-            "title": title,
-            "sentiment": sentiment[0]['label'],
-            "precision": sentiment[0]['score']
-        })
-
-    # Sort the results by precision in descending order
-    results = sorted(results, key=lambda x: x['precision'], reverse=True)
-    return results
-
-
 ################################################################################################################################
 # Function to perform web scraping
-def generic_web_content(url, tag, class_=None, class2=None, subtitle_tag=None):
+def generic_web_content(url, tag, class1=None, class2=None, subtitle_tag=None):
     # Verify that the request was successful (status code 200)
     response = requests.get(url)
     
@@ -202,8 +165,8 @@ def generic_web_content(url, tag, class_=None, class2=None, subtitle_tag=None):
     soup = BeautifulSoup(response.content, "html.parser")
 
     # Step 3: Extract the main elements (tags with optional class)
-    if class_:
-        elements = soup.find_all(tag, class_=class_)
+    if class1:
+        elements = soup.find_all(tag, class_=class1)
     else:
         elements = soup.find_all(tag)
 
@@ -297,12 +260,12 @@ def scrape_bbc_headlines():
         # URL and parameters for BBC scraping
         url = "https://bbc.com"
         tag = "a"
-        class = "sc-2e6baa30-0 gILusN"
+        class1 = "sc-2e6baa30-0 gILusN"
         class2 = ["sc-8ea7699c-3 dhclWg", "sc-8ea7699c-3 hlhXXQ"]
         subtitle_tag = "h2"
 
         # Scraping content from BBC
-        news_items = generic_web_content(url, tag, class, class2, subtitle_tag)
+        news_items = generic_web_content(url, tag, class1, class2, subtitle_tag)
 
         # Remove duplicates
         unique_news_items = remove_duplicates(news_items)
@@ -323,19 +286,16 @@ def scrape_bbc_headlines():
 # CNN Endpoint
 @app.get("/scrapping_cnn")
 def scrape_cnn_headlines():
-    """
-    Scrapes headlines from CNN and performs sentiment analysis.
-    """
     try:
         # URL and parameters for CNN scraping
         url = "https://cnn.com"
         tag = "a"
-        class_ = "container__link"
+        class1 = "container__link"
         class2 = "container__headline-text"
         subtitle_tag = "span"
 
         # Scraping content from CNN
-        news_items = contenido_web_generico(url, tag, class_, class2, subtitle_tag)
+        news_items = generic_web_content(url, tag, class1, class2, subtitle_tag)
 
         # Remove duplicates
         unique_news_items = remove_duplicates(news_items)
@@ -355,18 +315,13 @@ def scrape_cnn_headlines():
 # NYTimes Endpoint
 @app.get("/scrapping_nytimes")
 def scrape_nytimes_headlines():
-    """
-    Scrapes headlines from the New York Times and performs sentiment analysis.
-    """
     try:
         # URL and parameters for NYTimes scraping
         url_nytimes = "https://www.nytimes.com/international/section/world?page=10"
         
         # Scraping content from NYTimes
-        news_items_1 = contenido_web_generico(url_nytimes, etiqueta="a", clase="css-1u3p7j1")
-        news_items_2 = contenido_web_generico(
-            url_nytimes, etiqueta="a", clase="css-8hzhxf", clase2="css-1j88qqx e15t083i0", subtitulo_etiqueta="h3"
-        )
+        news_items_1 = generic_web_content(url_nytimes, tag="a", class1="css-1u3p7j1")
+        news_items_2 = generic_web_content(url_nytimes, tag="a", class1="css-8hzhxf", class2="css-1j88qqx e15t083i0", subtitle_tag="h3")
         
         # Combine results
         news_items = news_items_1 + news_items_2
@@ -393,86 +348,3 @@ def index():
     return {"Credits" : "Created by 'David Moreno Cerezo' and 'Jairo Andrades Bueno'"}
 
 ################################################################################################################################
-# Test endpoints
-
-# Option 1: The URL is included directly in the route, which may require encoding special characters.
-# Example: http://127.0.0.1:8000/scraping/bbc
-# Route to get headlines from a website
-@app.get("/scrapping/{url}")
-def get_headlines(url: str):
-    try:
-        # If the URL does not start with "http", it will be completed with https://
-        if not url.startswith("http"):
-            url = f"https://www.{url}.com"
-
-        # Call the scraping function
-        titles = content_from_web(url)
-
-        # Remove the last title
-        titles = titles[:-1]
-
-        # Perform sentiment analysis on the extracted titles
-        sentiment_results = analyze_sentiments(titles)
-
-        # Return the sentiment results and the titles
-        return {"result": sentiment_results, "amount": len(sentiment_results)}
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# Option 2: Use a query parameter ?url=, which simplifies passing complete URLs and avoids issues with special characters in the paths.
-# Example: http://127.0.0.1:8000/scraping/?url=https://www.bbc.com
-# Route to get the headlines from a website
-@app.get("/scrapping/")
-def obtener_titulares(url: str):
-    try:
-         # If the URL does not start with "http", it will be completed with https://
-        if not url.startswith("http"):
-            url = f"https://www.{url}.com"
-
-        # Call the scraping function
-        titles = content_from_web(url)
-
-        # Remove the last title
-        titles = titles[:-1]
-
-        # Perform sentiment analysis on the extracted titles
-        sentiment_results = analyze_sentiments(titles)
-
-        # Return the sentiment results and the titles
-        return {"result": sentiment_results, "amount": len(sentiment_results)}
-
-    except Exception as e:
-        return {"error": str(e)}
-
-###############################################################
-
-# Ejemplos de prueba
-# from fastapi import FastAPI
-from pydantic import BaseModel # Validacion de datos
-from typing import Optional # Datos opcionales
-
-#app = FastAPI()
-
-# Validar los datos
-class Libro(BaseModel):
-    titulo: str
-    autor: str
-    paginas: int
-    editorial: Optional[str]
-
-
-# @app.get("/")
-# def index():
-#     return {"message" : "Created by [Person 1] and [Person 2]"}
-
-
-@app.get("/libros/{id}")
-def mostrar_libro(id: int):
-    return {"id": id, "nombre": "El Señor de los Anillos"}
-
-
-@app.post("/libros")
-def insertar_libro(libro: Libro):
-    return {"menssage": f"Libro '{libro.titulo}' insertado"}
