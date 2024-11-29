@@ -23,9 +23,9 @@ This project is a FastAPI-based application that performs web scraping on variou
 ### Steps to Set Up the Environment
 
 #### 1. Create a Virtual Environment
-Ahora vamos a crear el archivo necesario para hacer la api, abrimos una nueva terminal y creamos una nueva carpeta.
+Now we will create the file necessary to build the API. Open a new terminal and create a new folder.
 
-Una vez dentro de esta, creamos un entorno virtual (lo llamaré `fastapi-env` para evitar conflictos con otros proyectos:
+Once inside the folder, create a virtual environment (I'll name it `fastapi-env` to avoid conflicts with other projects):
 - On Windows:
   ```bash
   python -m venv fastapi-env
@@ -70,7 +70,7 @@ Visit the [Rust installation](https://rustup.rs/) page and follow the instructio
   ```
 - Download the GeoIP database from [MaxMind's website](https://dev.maxmind.com/geoip/geolocate-an-ip/databases/).
 
-- Ejemplo del código:
+- Code Example:
   ```python
   from fastapi import FastAPI, HTTPException, Request
   import geoip2.database
@@ -179,10 +179,19 @@ pip freeze > requirements.txt
 - GET `/scrapping_cnn`: Scrapes and analyzes headlines from CNN.
 - GET `/scrapping_nytimes`: Scrapes and analyzes headlines from The New York Times.
 - GET `/`: Displays project credits.
-- GET `/docs`: Documento de la api creada automáticamente por FastAPI.
+- GET `/docs`: Automatically Generated API Documentation by FastAPI.
 
 #### Sentiment Analysis
 The project uses Hugging Face's `yiyanghkust/finbert-tone` model for analyzing sentiment (Positive, Neutral, Negative).
+
+We tested different models but decided to use  `yiyanghkust/finbert-tone`.
+
+The best ones and those with the highest ratings are:
+- [distilbert-base-uncased-finetuned-sst-2-english](https://huggingface.co/distilbert/distilbert-base-uncased-finetuned-sst-2-english)
+- [cardiffnlp/twitter-roberta-base-sentiment](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest)
+- [yiyanghkust/finbert-tone](https://huggingface.co/yiyanghkust/finbert-tone?text=Watch+UK+Championship%3A+Hawkins+frame+away+from+beating+Murphy+after+Trump%27s+impressive+win+over+Zhang)
+
+The **first model** only classifies into **positive** and **negative**, the **second model** classifies into **positive** (LABEL_2), **negative** (LABEL_0), and **neutral** (LABEL_1), but it requires an **authentication token** to use it, which can be created from [your Hugging Face account](https://huggingface.co/settings/tokens) . The **third model** is the same as the second one, it also requires the **token**, but this one labels the sentiments as **Negative**, **Positive**, and **Neutral**, not as LABEL_0, LABEL_1, and LABEL_2.
 
 #### URL for Local Access
 - [http://127.0.0.1:8000](http://127.0.0.1:8000)
@@ -190,3 +199,14 @@ The project uses Hugging Face's `yiyanghkust/finbert-tone` model for analyzing s
 ---
 
 ### Additional Notes
+- Ensure that Rust and Visual Studio are properly set up to avoid dependency issues.
+- Always activate your virtual environment before running or modifying the code.
+- The GeoIP2 module is optional and used for restricting API access based on geographical location.
+
+---
+
+### Credits
+This project was created by:
+
+- David Moreno Cerezo
+- Jairo Andrades Bueno
