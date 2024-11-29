@@ -98,7 +98,7 @@ def remove_duplicates(lst):
 # Function to analyze the sentiments of the news_items
 def analyze_sentiments(news_items):
     # Log in using your token (only once, you can skip it if you have already logged in previously)
-    login(token="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")
+    login(token="<token>")
 
     # Analyzes the sentiments of the titles and associates them with their links
     results = []
