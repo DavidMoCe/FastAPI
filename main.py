@@ -140,6 +140,9 @@ from typing import List
 # Library to perform natural language processing (NLP) tasks, like sentiment analysis
 from transformers import pipeline
 
+# Imports the 'login' function from the huggingface_hub library to authenticate the user with Hugging Face Hub
+from huggingface_hub import login
+
 # Library to handle relative and absolute URLs
 from urllib.parse import urljoin
 
@@ -149,8 +152,9 @@ app = FastAPI()
 
 # Load the pre-trained Hugging Face pipeline for sentiment analysis
 # The model distilbert-base-uncased-finetuned-sst-2-english is designed for sentiment analysis in English
-sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
-
+#sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+#sentiment_pipeline = pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment")
+sentiment_pipeline = pipeline("sentiment-analysis", model="yiyanghkust/finbert-tone")
 
 ################################################################################################################################
 # Function to perform web scraping
@@ -219,20 +223,37 @@ def remove_duplicates(lst):
 
 # Function to analyze the sentiments of the news_items
 def analyze_sentiments(news_items):
+    # Log in using your token (only once, you can skip it if you have already logged in previously)
+    login(token="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")
+
     # Analyzes the sentiments of the titles and associates them with their links
     results = []
+
+    # Dictionary for mapping indices to labels
+    #label_map = {'LABEL_0': "NEGATIVE", 'LABEL_1': "NEUTRAL", 'LABEL_2': "POSITIVE"}
 
     for i, r in enumerate(news_items):
         try:
             # Analyze the sentiment of the title
             sentiment = sentiment_pipeline(r['title'])
 
+            # Get the index and the score
+            #sentiment_label_index = sentiment[0]['label']
+            #score = sentiment[0]['score']
+
+            # Map the index to the corresponding label
+            #if sentiment_label_index in label_map:
+            #    sentiment_label = label_map[sentiment_label_index]
+            #else:
+            #    In case it's not in the mapping
+            #    sentiment_label = "Unknown"
+
             # Add the result
             results.append({
                 "title": r['title'],
                 "link": r['link'],
-                "sentiment": sentiment[0]['label'],
-                "precision": sentiment[0]['score'] * 100
+                "sentiment": sentiment[0]['label'].upper(),
+                "precision": round(sentiment[0]['score'] * 100, 5)
             })
         except Exception as e:
             # Handle cases where sentiment analysis or data is invalid
