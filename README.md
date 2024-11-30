@@ -147,7 +147,7 @@ login("your_huggingface_token_here")
    ```bash
    uvicorn main:app --reload
    ```
-  For remote hosting:
+  For remote hosting (**It is recommended to change the default port** for enhanced security):
   ```bash
   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
   ```
